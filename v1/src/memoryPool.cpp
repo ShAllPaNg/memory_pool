@@ -1,6 +1,6 @@
 #include "inc/memoryPool.h"
 
-namespace SP_MemoryPool {
+namespace SpMemoryPool {
 MemoryPool::MemoryPool(size_t blockSize)
     : m_blockSize(blockSize)
     , m_slotSize(0)
@@ -91,16 +91,16 @@ bool MemoryPool::AllocateNewBlock()
     return true;
 }
 
-MemoryPool& HashBucket::GetMemoryPoll(int index)
+MemoryPool& HashBucket::GetMemoryPool(int index)
 {
     static std::vector<MemoryPool> memoryPools(MEMORY_POOL_NUM, MemoryPool(4096));
     return memoryPools[index];
 }
 
-void HashBucket::InitMemoryPoll()
+void HashBucket::InitMemoryPool()
 {
     for (int i = 0; i < MEMORY_POOL_NUM; ++i) {
-        MemoryPool& pool = GetMemoryPoll(i);
+        MemoryPool& pool = GetMemoryPool(i);
         pool.Init((i + 1) * SLOT_BASE_SIZE);
     }
 }
@@ -113,7 +113,7 @@ void* HashBucket::Allocate(size_t size)
     if (size > MAX_SLOT_SIZE)
         return aligned_alloc(size, size);
 
-    return GetMemoryPoll((size - 1) / SLOT_BASE_SIZE).Allocate();
+    return GetMemoryPool((size - 1) / SLOT_BASE_SIZE).Allocate();
 }
 void HashBucket::Deallocate(void* ptr, size_t size)
 {
@@ -124,26 +124,8 @@ void HashBucket::Deallocate(void* ptr, size_t size)
         free(ptr);
         return;
     }
-    GetMemoryPoll((size - 1) / SLOT_BASE_SIZE).Deallocate(ptr);
+    GetMemoryPool((size - 1) / SLOT_BASE_SIZE).Deallocate(ptr);
 }
 
-template <class T, class... Args>
-T* NewElement(Args&&... args)
-{
-    void* addr = HashBucket::Allocate(sizeof(T));
-    if (addr == nullptr)
-        return nullptr;
-    T* ret = new (addr) T(std::forward<Args>(args)...);
-    return ret;
-}
-
-template <class T>
-void DeleteElement(T* ptr)
-{
-    if (ptr) {
-        ptr->~T();
-        HashBucket::Deallocate(ptr, sizeof(T));
-    }
-}
 
 } // namespace SP_MemoryPool
