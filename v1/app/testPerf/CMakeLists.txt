@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 #项目名称
-project(testMPV1 VERSION 1.0 LANGUAGES CXX)
+project(testPerf VERSION 1.0 LANGUAGES CXX)
 
 #设置c++标准
 set(CMAKE_CXX_STANDARD 11)

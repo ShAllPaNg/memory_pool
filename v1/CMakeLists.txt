@@ -13,4 +13,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #子目录
 add_subdirectory(${PROJECT_SOURCE_DIR}/src)
-add_subdirectory(${PROJECT_SOURCE_DIR}/app/testMemoryPoolV1)
+add_subdirectory(${PROJECT_SOURCE_DIR}/app/testPerf)
