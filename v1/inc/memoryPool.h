@@ -6,11 +6,6 @@
 #include <cstdlib>
 #include <vector>
 namespace SpMemoryPool {
-
-const size_t MEMORY_POOL_NUM = 64;
-const size_t SLOT_BASE_SIZE = 8;
-const size_t MAX_SLOT_SIZE = MEMORY_POOL_NUM * SLOT_BASE_SIZE;
-
 class MemoryPool {
 public:
     MemoryPool(size_t blockSize = 4096);
@@ -20,6 +15,15 @@ public:
 
     void* Allocate();
     void Deallocate(void* ptr);
+
+    size_t GetBlockCnt()
+    {
+        return m_blockCnt;
+    }
+    size_t GetFreeSlotCnt()
+    {
+        return m_freeSlotCnt;
+    }
 
 private:
     union Slot {
@@ -43,43 +47,12 @@ private:
     Slot* m_lastSlot;
     // 空闲空间链表
     Slot* m_freeList;
+
+    // 错误检查
+    size_t m_blockCnt;
+    size_t m_freeSlotCnt;
 };
 
-class HashBucket {
-public:
-    template <class T, class... Args>
-    friend T* NewElement(Args&&... args);
-
-    template <class T>
-    friend void DeleteElement(T* ptr);
-
-    static MemoryPool& GetMemoryPool(int index);
-    static void InitMemoryPool();
-
-private:
-    static void* Allocate(size_t size);
-    static void Deallocate(void* ptr, size_t size);
-};
-
-//函数模板放在头文件中，编译时才能正常实例化
-template <class T, class... Args>
-T* NewElement(Args&&... args)
-{
-    void* addr = HashBucket::Allocate(sizeof(T));
-    if (addr == nullptr)
-        return nullptr;
-    T* ret = new (addr) T(std::forward<Args>(args)...);
-    return ret;
-}
-
-template <class T>
-void DeleteElement(T* ptr)
-{
-    if (ptr) {
-        ptr->~T();
-        HashBucket::Deallocate(ptr, sizeof(T));
-    }
-}
 } // namespace SP_MemoryPool
 
 #endif //_MEMORY_POOL_H_

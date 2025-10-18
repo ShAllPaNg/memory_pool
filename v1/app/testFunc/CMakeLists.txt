@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 #项目名称
-project(testPerf VERSION 1.0 LANGUAGES CXX)
+project(testFunc VERSION 1.0 LANGUAGES CXX)
 
 #设置c++标准
 set(CMAKE_CXX_STANDARD 11)
@@ -19,17 +19,18 @@ include_directories(${PROJECT_SOURCE_DIR}/../..)
 link_directories(${PROJECT_SOURCE_DIR}/../../src)
 
 #源文件
-file(GLOB TEST_PERF_SRC "*.cpp")
+file(GLOB TEST_FUNC_SRC "*.cpp")
 
 
 #生成可执行文件
-add_executable(${PROJECT_NAME} ${TEST_PERF_SRC})
+add_executable(${PROJECT_NAME} ${TEST_FUNC_SRC})
 
 #链接静态库
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PRIVATE
     memoryPool_v1
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE gtest pthread)
 
 #编译选项
 target_compile_options(${PROJECT_NAME} PRIVATE -g)
