@@ -50,8 +50,18 @@ public:
     }
 
 private:
-    union Slot {
+    struct Slot {
         Slot* next;
+    };
+
+    struct TaggedPtr {
+        Slot* ptr;
+        uint64_t tag;
+        TaggedPtr(Slot* p = nullptr, uint64_t t = 0)
+            : ptr(p)
+            , tag(t)
+        {
+        }
     };
 
     void* PopFreeList();
@@ -63,9 +73,12 @@ private:
         return align - (reinterpret_cast<size_t>(addr) % align);
     }
 
-    //std::mutex m_blockMutex, m_freeListMutex;
+    // std::mutex m_blockMutex, m_freeListMutex;
 
-    SpinLock m_blockMutex, m_freeListMutex;
+    // SpinLock m_blockMutex, m_freeListMutex;
+
+    std::mutex m_blockMutex;
+    std::mutex m_freeListMutex;
 
     size_t m_blockSize;
     size_t m_slotSize;
@@ -74,7 +87,7 @@ private:
     Slot* m_curSlot;
     Slot* m_lastSlot;
     // 空闲空间链表
-    Slot* m_freeList;
+    std::atomic<TaggedPtr> m_freeList;
 
     // 错误检查
     size_t m_blockCnt;

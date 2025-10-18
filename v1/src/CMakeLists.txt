@@ -21,5 +21,8 @@ file(GLOB V1_SOURCE "*.cpp")
 #生成静态库
 add_library(${PROJECT_NAME} STATIC ${V1_SOURCE})
 
+#连接库
+target_link_libraries(${PROJECT_NAME} pthread atomic)
+
 #编译选项
 target_compile_options(${PROJECT_NAME} PRIVATE -g)

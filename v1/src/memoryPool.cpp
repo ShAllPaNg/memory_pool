@@ -7,7 +7,7 @@ MemoryPool::MemoryPool(size_t blockSize)
     , m_firstBlock(nullptr)
     , m_curSlot(nullptr)
     , m_lastSlot(nullptr)
-    , m_freeList(nullptr)
+    , m_freeList(TaggedPtr())
     , m_blockCnt(0)
     , m_freeSlotCnt(0)
 {
@@ -24,7 +24,7 @@ MemoryPool::~MemoryPool()
 
 void MemoryPool::Init(size_t slotSize)
 {
-    m_slotSize = slotSize;
+    m_slotSize = std::max(slotSize, sizeof(Slot));
 }
 
 void* MemoryPool::Allocate()
@@ -36,7 +36,7 @@ void* MemoryPool::Allocate()
     if (ret)
         return ret;
 
-    std::lock_guard<SpinLock> lock(m_blockMutex);
+    std::lock_guard<std::mutex> lock(m_blockMutex);
     // 检查是否需要分配新的内存块
     if (m_firstBlock == nullptr || m_curSlot >= m_lastSlot) {
         if (!AllocateNewBlock()) {
@@ -59,18 +59,21 @@ void MemoryPool::Deallocate(void* ptr)
 
 void* MemoryPool::PopFreeList()
 {
+    // std::lock_guard<std::mutex> lock(m_freeListMutex);
 
-    Slot* ret = nullptr;
-    if (!m_freeList)
-        return static_cast<void*>(ret);
-        
-    std::lock_guard<SpinLock> lock(m_freeListMutex);
-    if (m_freeList) {
-        ret = m_freeList;
-        m_freeList = m_freeList->next;
-        m_freeSlotCnt--;
+    TaggedPtr oldTagPtr = m_freeList.load();
+    while (oldTagPtr.ptr != nullptr) {
+        Slot* curHead = oldTagPtr.ptr;
+        Slot* next = curHead->next;
+
+        TaggedPtr newTagPtr(next, oldTagPtr.tag + 1);
+
+        if (m_freeList.compare_exchange_strong(oldTagPtr, newTagPtr)) { // 如果操作不成功，OldTagPtr会被更新为新的头结点指针，相当于重新m_freeList.load()
+            m_freeSlotCnt++;
+            return static_cast<void*>(curHead);
+        }
     }
-    return static_cast<void*>(ret);
+    return nullptr;
 }
 
 void MemoryPool::PushFreeList(void* ptr)
@@ -78,13 +81,15 @@ void MemoryPool::PushFreeList(void* ptr)
     if (!ptr)
         return;
     Slot* newSlot = static_cast<Slot*>(ptr);
-
-    std::lock_guard<SpinLock> lock(m_freeListMutex);
-
-    newSlot->next = m_freeList;
-    m_freeList = newSlot;
-
-    m_freeSlotCnt++;
+    // std::lock_guard<std::mutex> lock(m_freeListMutex);
+    TaggedPtr oldTagptr = m_freeList.load();
+    while (true) {
+        newSlot->next = oldTagptr.ptr;
+        TaggedPtr newTagPtr(newSlot, oldTagptr.tag + 1);
+        if (m_freeList.compare_exchange_strong(oldTagptr, newTagPtr)) { // 如果操作不成功，OldTagPtr会被更新为新的头结点指针，相当于重新m_freeList.load()
+            break;
+        }
+    }
 }
 
 bool MemoryPool::AllocateNewBlock()
