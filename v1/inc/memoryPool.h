@@ -1,10 +1,15 @@
 #ifndef _MEMORY_POOL_H_
 #define _MEMORY_POOL_H_
 
+
+#include <mutex>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
+
+
 namespace SpMemoryPool {
 class MemoryPool {
 public:
@@ -39,6 +44,7 @@ private:
         return align - (reinterpret_cast<size_t>(addr) % align);
     }
 
+    std::mutex m_blockMutex, m_freeListMutex;
     size_t m_blockSize;
     size_t m_slotSize;
     // 大内存块链表

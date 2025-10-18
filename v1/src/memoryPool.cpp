@@ -29,10 +29,14 @@ void MemoryPool::Init(size_t slotSize)
 
 void* MemoryPool::Allocate()
 {
+    void* ret = nullptr;
+
     // 优先从空闲链表中分配
-    void* ret = PopFreeList();
+    ret = PopFreeList();
     if (ret)
         return ret;
+
+    std::lock_guard<std::mutex> lock(m_blockMutex);
     // 检查是否需要分配新的内存块
     if (m_firstBlock == nullptr || m_curSlot >= m_lastSlot) {
         if (!AllocateNewBlock()) {
@@ -55,7 +59,12 @@ void MemoryPool::Deallocate(void* ptr)
 
 void* MemoryPool::PopFreeList()
 {
+
     Slot* ret = nullptr;
+    if (!m_freeList)
+        return static_cast<void*>(ret);
+        
+    std::lock_guard<std::mutex> lock(m_freeListMutex);
     if (m_freeList) {
         ret = m_freeList;
         m_freeList = m_freeList->next;
@@ -69,6 +78,9 @@ void MemoryPool::PushFreeList(void* ptr)
     if (!ptr)
         return;
     Slot* newSlot = static_cast<Slot*>(ptr);
+
+    std::lock_guard<std::mutex> lock(m_freeListMutex);
+
     newSlot->next = m_freeList;
     m_freeList = newSlot;
 

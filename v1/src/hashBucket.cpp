@@ -6,7 +6,7 @@ namespace SpMemoryPool {
 
 MemoryPool& HashBucket::GetMemoryPool(int index)
 {
-    static std::vector<MemoryPool> memoryPools(MEMORY_POOL_NUM, MemoryPool(4096));
+    static MemoryPool memoryPools[MEMORY_POOL_NUM];
     return memoryPools[index];
 }
 
