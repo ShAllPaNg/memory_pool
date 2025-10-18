@@ -36,7 +36,7 @@ void* MemoryPool::Allocate()
     if (ret)
         return ret;
 
-    std::lock_guard<std::mutex> lock(m_blockMutex);
+    std::lock_guard<SpinLock> lock(m_blockMutex);
     // 检查是否需要分配新的内存块
     if (m_firstBlock == nullptr || m_curSlot >= m_lastSlot) {
         if (!AllocateNewBlock()) {
@@ -64,7 +64,7 @@ void* MemoryPool::PopFreeList()
     if (!m_freeList)
         return static_cast<void*>(ret);
         
-    std::lock_guard<std::mutex> lock(m_freeListMutex);
+    std::lock_guard<SpinLock> lock(m_freeListMutex);
     if (m_freeList) {
         ret = m_freeList;
         m_freeList = m_freeList->next;
@@ -79,7 +79,7 @@ void MemoryPool::PushFreeList(void* ptr)
         return;
     Slot* newSlot = static_cast<Slot*>(ptr);
 
-    std::lock_guard<std::mutex> lock(m_freeListMutex);
+    std::lock_guard<SpinLock> lock(m_freeListMutex);
 
     newSlot->next = m_freeList;
     m_freeList = newSlot;

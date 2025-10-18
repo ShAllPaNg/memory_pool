@@ -1,7 +1,7 @@
 #ifndef _MEMORY_POOL_H_
 #define _MEMORY_POOL_H_
 
-
+#include <atomic>
 #include <mutex>
 
 #include <cstddef>
@@ -9,8 +9,27 @@
 #include <cstdlib>
 #include <vector>
 
-
 namespace SpMemoryPool {
+
+class SpinLock {
+public:
+    SpinLock()
+        : flag(ATOMIC_FLAG_INIT)
+    {
+    }
+    void lock()
+    {
+        while (flag.test_and_set(std::memory_order_acquire)) { }
+    }
+    void unlock()
+    {
+        flag.clear(std::memory_order_release);
+    }
+
+private:
+    std::atomic_flag flag;
+};
+
 class MemoryPool {
 public:
     MemoryPool(size_t blockSize = 4096);
@@ -44,7 +63,10 @@ private:
         return align - (reinterpret_cast<size_t>(addr) % align);
     }
 
-    std::mutex m_blockMutex, m_freeListMutex;
+    //std::mutex m_blockMutex, m_freeListMutex;
+
+    SpinLock m_blockMutex, m_freeListMutex;
+
     size_t m_blockSize;
     size_t m_slotSize;
     // 大内存块链表
